@@ -117,8 +117,34 @@ curl -X POST http://localhost:8080/api/v1/franchises -H 'Content-Type: applicati
 Workflow GitHub Actions: `.github/workflows/ci.yml` ejecuta build + coverage gate (80%).
 
 ## CD (Docker image)
-- Workflow `.github/workflows/cd-docker.yml` publica la imagen en GHCR al hacer push a `main` o tags `v*.*.*`.
-- La imagen queda en `ghcr.io/<owner>/<repo>:<tag>`.
+- GHCR (GitHub Container Registry)
+  - Workflow: `.github/workflows/cd-docker.yml`
+  - Evento: push a `main` o tags `v*.*.*`
+  - Destino: `ghcr.io/<owner>/<repo>:<tag>`
+  - Requisitos:
+    - Nada extra: usa `${{ secrets.GITHUB_TOKEN }}` por defecto.
+  - Tips:
+    - Si quieres que sea público, ve al paquete (Packages) del repo y cambia visibilidad.
+  - Pull de ejemplo:
+    ```bash
+    docker pull ghcr.io/<owner>/<repo>:main
+    docker run --rm -p 8080:8080 ghcr.io/<owner>/<repo>:main
+    ```
+
+- Docker Hub (multi-arch amd64/arm64)
+  - Workflow: `.github/workflows/cd-dockerhub.yml`
+  - Evento: push a `main` o tags `v*.*.*`
+  - Destino: `docker.io/<DOCKERHUB_USERNAME>/<repo_name>:<tag>`
+  - Requisitos (configurar en Settings > Secrets and variables > Actions):
+    - `DOCKERHUB_USERNAME`: tu usuario de Docker Hub.
+    - `DOCKERHUB_TOKEN`: token de acceso (crearlo en Docker Hub > Security > New Access Token).
+  - El workflow detecta el nombre del repo automáticamente (`${{ github.event.repository.name }}`).
+  - Pull de ejemplo:
+    ```bash
+    docker pull <DOCKERHUB_USERNAME>/<repo_name>:main
+    docker run --rm -p 8080:8080 <DOCKERHUB_USERNAME>/<repo_name>:main
+    ```
+  - Multi-arch: publica manifiesto para linux/amd64 y linux/arm64 (útil para Apple Silicon).
 
 ## Pending / Futuro
 - Añadir Testcontainers para integración real (MongoDB). 
