@@ -186,4 +186,35 @@ REST: Recursos y acciones siguen convención HTTP (POST crea, PATCH modifica, DE
 - Añadir IaC (Terraform) para Mongo administrado y despliegue.
 - Pipeline CD y despliegue en nube.
 - Correlation ID en logs.
+
+## Cobertura de Pruebas (JaCoCo)
+
+La suite actual supera el umbral de aceptación (≥ 60%) y se sitúa alrededor del 90% en la capa de casos de uso, con >90% de instrucciones a nivel global según el último reporte.
+
+Capturas del reporte JaCoCo (generado en `build/reports/jacoco/test/html/index.html`):
+
+![Paquete application.usecase](docs/images/jacoco-usecases.png)
+
+![Resumen global](docs/images/jacoco-summary.png)
+
+Cómo regenerar y ver el reporte localmente:
+
+```bash
+./gradlew test jacocoTestReport --no-daemon
+# abrir build/reports/jacoco/test/html/index.html en el navegador
+```
+
+Si estás en WSL y quieres verlo desde Windows, puedes servirlo con Python:
+
+```bash
+cd build/reports/jacoco/test/html
+python3 -m http.server 8000 --bind 0.0.0.0
+# Navega a http://localhost:8000/
+```
+
+Las imágenes de arriba deben ubicarse en `docs/images/` con los nombres:
+- `jacoco-usecases.png`
+- `jacoco-summary.png`
+
+Si prefieres, sube tus capturas a esa ruta y se verán automáticamente en el README.
 ```
