@@ -1,5 +1,8 @@
 # Franchise API (Reactive, Hexagonal)
 
+[![CI](https://github.com/JhonHeiler/franchise-management-api/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JhonHeiler/franchise-management-api/actions/workflows/ci.yml)
+[![coverage](https://img.shields.io/badge/coverage-91%25-brightgreen.svg)](#cobertura-de-pruebas-jacoco)
+
 API reactiva para gestionar Franquicias, Sucursales (Branches) y Productos con stock.
 
 ## Stack
