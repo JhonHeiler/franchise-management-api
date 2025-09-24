@@ -53,6 +53,18 @@ App + Mongo (con build):
 docker compose up --build
 ```
 
+## Diagrama (Mermaid)
+```mermaid
+flowchart LR
+  Client((Client)) -->|HTTP REST| API[Spring Boot WebFlux]
+  subgraph App
+    API --> UseCases[application.usecase]
+    UseCases --> Ports[domain.port]
+    Ports --> MongoAdapter[infrastructure.adapter.repository.mongo]
+  end
+  MongoAdapter -->|Reactive Mongo| Mongo[(MongoDB)]
+```
+
 ## Variables de entorno
 - `SPRING_DATA_MONGODB_URI` (por ejemplo: `mongodb://root:secret@mongodb:27017/franchise_db?authSource=admin`)
 - `SERVER_PORT` (opcional, default 8080)
@@ -85,6 +97,17 @@ Si usas DBeaver PRO, sí incluye driver para MongoDB y puedes configurar:
 - Usuario: `root`  |  Password: `secret`
 - Database: `franchise_db`  |  Auth DB: `admin`
 
+## Seed de datos
+Opción HTTP (requiere API arriba y `jq` instalado):
+```bash
+bash scripts/seed-http.sh
+```
+
+Opción mongosh (si prefieres cargar directo en DB):
+```bash
+mongosh "mongodb://root:secret@localhost:27017/franchise_db?authSource=admin" scripts/seed-mongosh.js
+```
+
 ## Ejemplos CURL
 ```bash
 curl -X POST http://localhost:8080/api/v1/franchises -H 'Content-Type: application/json' -d '{"name":"ACME"}'
@@ -92,6 +115,10 @@ curl -X POST http://localhost:8080/api/v1/franchises -H 'Content-Type: applicati
 
 ## CI
 Workflow GitHub Actions: `.github/workflows/ci.yml` ejecuta build + coverage gate (80%).
+
+## CD (Docker image)
+- Workflow `.github/workflows/cd-docker.yml` publica la imagen en GHCR al hacer push a `main` o tags `v*.*.*`.
+- La imagen queda en `ghcr.io/<owner>/<repo>:<tag>`.
 
 ## Pending / Futuro
 - Añadir Testcontainers para integración real (MongoDB). 
