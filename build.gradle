@@ -1,0 +1,105 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.6'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'jacoco'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+springBoot {
+	mainClass = 'com.example.franchise.FranchiseApiApplication'
+}
+
+java {
+	// Upgraded to Java 21 (LTS). Gradle toolchain will provision if not locally installed.
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+// Fallback for editors that mis-detect packages when toolchain unresolved
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb-reactive'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0'
+	implementation 'io.micrometer:micrometer-core'
+	// Align Testcontainers modules via BOM (ensures Java 21 compatible versions)
+	testImplementation platform('org.testcontainers:testcontainers-bom:1.20.3')
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation 'org.testcontainers:junit-jupiter'
+	testImplementation 'org.testcontainers:mongodb'
+	testImplementation 'org.mockito:mockito-core'
+	testImplementation 'org.mockito:mockito-junit-jupiter'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform {
+		// Exclude integration tests by default; run with -PintegrationTests or -DincludeIntegration
+		if (!project.hasProperty('integrationTests') && System.getProperty('includeIntegration') == null) {
+			excludeTags 'integration'
+		}
+	}
+}
+
+tasks.register('integrationTest', Test) {
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	shouldRunAfter tasks.test
+	onlyIf { project.hasProperty('withIntegration') || System.getProperty('includeIntegration') != null }
+}
+
+// Optional convenience: run with `./gradlew check -PwithIntegration` to include integration tests
+
+jacoco {
+	// 0.8.12 adds/supports latest JDK class file versions (incl. Java 21)
+	toolVersion = '0.8.12'
+}
+
+tasks.jacocoTestReport {
+	dependsOn tasks.test
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+tasks.jacocoTestCoverageVerification {
+	dependsOn tasks.test
+	violationRules {
+		rule {
+			limit {
+				minimum = 0.80
+			}
+		}
+	}
+}
+
+tasks.check {
+	dependsOn tasks.jacocoTestReport, tasks.jacocoTestCoverageVerification
+}
