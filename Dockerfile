@@ -7,7 +7,7 @@ COPY gradlew settings.gradle build.gradle ./
 COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
 
-# Then project sources/resources
+# Then project sources/resources (includes src/main/resources/application.yml)
 COPY src ./src
 
 # Build only the bootJar (tests can run in CI separately) - adjust if you need tests here

@@ -1,7 +1,7 @@
 services:
-  mongo:
+  mongodb:
     image: mongo:7
-    container_name: franchise-mongo
+    container_name: mongodb
     ports:
       - "27017:27017"
     environment:
@@ -22,12 +22,13 @@ services:
       dockerfile: Dockerfile
     container_name: franchise-api
     depends_on:
-      mongo:
+      mongodb:
         condition: service_healthy
     environment:
       SERVER_PORT: "8080"
-      SPRING_PROFILES_ACTIVE: "docker"
-      MONGODB_URI: "mongodb://root:secret@mongo:27017/franchise_db?authSource=admin"
+      SPRING_PROFILES_ACTIVE: docker
+      # IMPORTANT: Use SPRING_DATA_MONGODB_URI (exact name), not MONGODB_URI
+      SPRING_DATA_MONGODB_URI: mongodb://root:secret@mongodb:27017/franchise_db?authSource=admin
     ports:
       - "8080:8080"
 

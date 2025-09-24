@@ -37,16 +37,16 @@ com.example.franchise
 - Docs: http://localhost:8080/v3/api-docs
 
 ## Perfiles y Mongo
-`application.yml` soporta perfiles: `local`, `docker`, `test` y variable `MONGODB_URI`.
+`application.yml` soporta perfiles: `local`, `docker`, `test` y usa la variable `SPRING_DATA_MONGODB_URI` para configurar la conexión. En el perfil `docker` la app ya apunta por defecto a `mongodb` (nombre del servicio en Docker Compose) y base `franchise_db` con `authSource=admin`.
 
 ## Docker
 Multi-stage build en `Dockerfile` y `docker-compose.yml` con servicios:
-- mongo (mongo:7)
+- mongodb (mongo:7)
 - app
 
 Levantar solo Mongo:
 ```bash
-docker compose up mongo
+docker compose up mongodb
 ```
 App + Mongo (con build):
 ```bash
@@ -54,18 +54,36 @@ docker compose up --build
 ```
 
 ## Variables de entorno
-- `MONGODB_URI` (por defecto local sin auth)
+- `SPRING_DATA_MONGODB_URI` (por ejemplo: `mongodb://root:secret@mongodb:27017/franchise_db?authSource=admin`)
 - `SERVER_PORT` (opcional, default 8080)
 
-## DBeaver (Daver) Conexión
-- Tipo: MongoDB
-- Host: `localhost` (o `mongo` dentro de la red compose)
+## DBeaver / Alternativas para ver MongoDB
+Atención: En versiones recientes, DBeaver Community no incluye driver nativo para MongoDB. Opciones:
+
+1) Compass (recomendado, gratuito)
+   - Instala MongoDB Compass y conéctate con la siguiente cadena:
+     ```
+     mongodb://root:secret@localhost:27017/franchise_db?authSource=admin
+     ```
+
+2) Extensión “MongoDB for VS Code”
+   - Instala la extensión en VS Code, crea una conexión con la misma URI.
+
+3) Línea de comando (mongosh)
+   - Desde tu máquina:
+     ```bash
+     mongosh "mongodb://root:secret@localhost:27017/franchise_db?authSource=admin"
+     ```
+   - O dentro del contenedor:
+     ```bash
+     docker exec -it mongodb mongosh -u root -p secret --authenticationDatabase admin franchise_db
+     ```
+
+Si usas DBeaver PRO, sí incluye driver para MongoDB y puedes configurar:
+- Host: `localhost` (en red de Docker: `mongodb`)
 - Puerto: `27017`
-- Usuario: `root`
-- Password: `secret`
-- Database: `franchise_db`
-- Auth Source: `admin`
-Instala y selecciona el driver MongoDB en DBeaver si no lo tienes.
+- Usuario: `root`  |  Password: `secret`
+- Database: `franchise_db`  |  Auth DB: `admin`
 
 ## Ejemplos CURL
 ```bash

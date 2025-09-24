@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: franchise-api
+  data:
+    mongodb:
+      # Default for local runs; can be overridden by env SPRING_DATA_MONGODB_URI
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/franchise_db}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/franchise_db}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  data:
+    mongodb:
+      # In docker, point to the service hostname 'mongodb' with credentials
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:secret@mongodb:27017/franchise_db?authSource=admin}
+  logging:
+    level:
+      org.springframework.boot.context.config: DEBUG
+      org.springframework.boot.autoconfigure.mongo: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/franchise_db_test
+
+---
+spring:
+  config:
+    activate:
+      on-profile: no-mongo
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoReactiveRepositoriesAutoConfiguration
+
+---
+spring:
+  config:
+    activate:
+      on-profile: inmem
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoReactiveAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoReactiveRepositoriesAutoConfiguration
