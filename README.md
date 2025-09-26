@@ -122,6 +122,8 @@ Respuesta:
 ## OpenAPI / Swagger
 - UI: http://localhost:8080/swagger-ui.html
 - Docs: http://localhost:8080/v3/api-docs
+- <img width="1761" height="967" alt="image" src="https://github.com/user-attachments/assets/7ee9637d-82b9-4b9c-98fd-6b1678326283" />
+
 
 ## Perfiles y Mongo
 `application.yml` soporta perfiles: `local`, `docker`, `test` y usa la variable `SPRING_DATA_MONGODB_URI` para configurar la conexión. En el perfil `docker` la app ya apunta por defecto a `mongodb` (nombre del servicio en Docker Compose) y base `franchise_db` con `authSource=admin`.
