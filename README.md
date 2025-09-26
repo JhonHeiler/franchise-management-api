@@ -12,6 +12,42 @@ API reactiva para gestionar Franquicias, Sucursales (Branches) y Productos con s
 - Testing: JUnit 5, Reactor Test, WebFluxTest, (placeholder Testcontainers pendiente si se agrega contenedor Mongo)
 - JaCoCo (>=80%)
 
+## Quick Start (sin Docker, perfil en memoria)
+Ejecuta la API sin necesidad de Mongo usando repositorios in-memory.
+
+```bash
+chmod +x scripts/run-inmem.sh
+./scripts/run-inmem.sh
+# Abrir: http://localhost:8080/
+```
+
+Si el puerto 8080 está ocupado:
+```bash
+export SERVER_PORT=9090
+./scripts/run-inmem.sh
+```
+
+## Evidencia (Swagger UI)
+Captura de la especificación generada automáticamente (springdoc-openapi):
+
+![Swagger UI](docs/images/swagger-ui.png)
+
+La UI expone los endpoints requeridos bajo el prefijo `/api/v1` (franquicias, sucursales, productos y agregación de máximo stock por sucursal).
+
+## Quick Start con Mongo local
+Levanta un contenedor Mongo y apunta la app a él:
+```bash
+docker run -d --name mongo -p 27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=root \
+  -e MONGO_INITDB_ROOT_PASSWORD=secret mongo:7
+
+export SPRING_DATA_MONGODB_URI='mongodb://root:secret@localhost:27017/franchise_db?authSource=admin'
+chmod +x scripts/run-mongo.sh
+./scripts/run-mongo.sh
+```
+Swagger: http://localhost:8080/swagger-ui.html
+
+
 ## Arquitectura (paquetes principales)
 ```
 com.example.franchise
@@ -25,15 +61,63 @@ com.example.franchise
 ```
 
 ## Endpoints (prefijo `/api/v1`)
-1. POST /franchises
-2. PATCH /franchises/{franchiseId}
-3. POST /franchises/{franchiseId}/branches
-4. PATCH /franchises/{franchiseId}/branches/{branchId}
-5. POST /franchises/{franchiseId}/branches/{branchId}/products
-6. DELETE /franchises/{franchiseId}/branches/{branchId}/products/{productId}
-7. PATCH /franchises/{franchiseId}/branches/{branchId}/products/{productId}/stock
-8. PATCH /franchises/{franchiseId}/branches/{branchId}/products/{productId}
-9. GET /franchises/{franchiseId}/branches/max-stock-products (aggregation)
+| # | Método | Ruta | Descripción | Req Body | Respuesta (HTTP) |
+|:-:|:------:|------|-------------|----------|------------------|
+|1|POST|`/franchises`|Crear franquicia|`{ "name": "ACME" }`|`201` + `{id,name}`|
+|2|PATCH|`/franchises/{franchiseId}`|Renombrar franquicia|`{ "name": "Nuevo" }`|`204`|
+|3|POST|`/franchises/{franchiseId}/branches`|Agregar sucursal|`{ "name": "Lima" }`|`201` + `{id,franchiseId,name}`|
+|4|PATCH|`/franchises/{franchiseId}/branches/{branchId}`|Renombrar sucursal|`{ "name": "Lima Centro" }`|`204`|
+|5|POST|`/franchises/{franchiseId}/branches/{branchId}/products`|Agregar producto|`{ "name": "Burger", "stock": 10 }`|`201` + `{id,branchId,name,stock}`|
+|6|DELETE|`/franchises/{franchiseId}/branches/{branchId}/products/{productId}`|Eliminar producto|—|`204`|
+|7|PATCH|`/franchises/{franchiseId}/branches/{branchId}/products/{productId}/stock`|Actualizar stock|`{ "stock": 25 }`|`200` + producto actualizado|
+|8|PATCH|`/franchises/{franchiseId}/branches/{branchId}/products/{productId}`|Renombrar producto|`{ "name": "Burger XL" }`|`204`|
+|9|GET|`/franchises/{franchiseId}/branches/max-stock-products`|Producto con mayor stock por sucursal (agregación)|—|`200` + `[{branchId,branchName,productId,productName,stock}]`|
+|10|GET|`/franchises/{franchiseId}/with-branches`|Franquicia + sucursales (ejemplo uso `zip`) |—|`200` + aggregate|
+
+### Ejemplos de Requests / Responses
+
+Crear franquicia:
+```bash
+curl -s -X POST http://localhost:8080/api/v1/franchises \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"ACME"}'
+```
+Respuesta:
+```json
+{ "id": "f123", "name": "ACME" }
+```
+
+Agregar sucursal:
+```bash
+curl -s -X POST http://localhost:8080/api/v1/franchises/f123/branches \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Lima"}'
+```
+
+Agregar producto:
+```bash
+curl -s -X POST http://localhost:8080/api/v1/franchises/f123/branches/b456/products \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Burger","stock":15}'
+```
+
+Actualizar stock:
+```bash
+curl -s -X PATCH http://localhost:8080/api/v1/franchises/f123/branches/b456/products/p789/stock \
+  -H 'Content-Type: application/json' \
+  -d '{"stock":42}'
+```
+
+Agregación (máximo stock por sucursal):
+```bash
+curl -s http://localhost:8080/api/v1/franchises/f123/branches/max-stock-products
+```
+Respuesta:
+```json
+[
+  {"branchId":"b456","branchName":"Lima","productId":"p789","productName":"Burger","stock":42}
+]
+```
 
 ## OpenAPI / Swagger
 - UI: http://localhost:8080/swagger-ui.html
@@ -115,6 +199,77 @@ mongosh "mongodb://root:secret@localhost:27017/franchise_db?authSource=admin" sc
 ```bash
 curl -X POST http://localhost:8080/api/v1/franchises -H 'Content-Type: application/json' -d '{"name":"ACME"}'
 ```
+
+## Criterios de Aceptación (Checklist)
+
+| Criterio | Implementado | Evidencia / Nota |
+|----------|--------------|------------------|
+| 1. Spring Boot WebFlux + Arquitectura Hexagonal | ✔ | Paquetes domain / application / infrastructure |
+| 2. Persistencia en proveedor (MongoDB) | ✔ | Reactive Mongo + opción in-memory para desarrollo |
+| 3. Encadenar flujos (map, flatMap, switchIfEmpty, zip) | ✔ | Use Cases y controllers (ver `GetFranchiseWithBranchesUseCase`) |
+| 4. Uso correcto señales Reactor | ✔ | `doOnError`, flujos completan correctamente (no bloqueos) |
+| 5. Logging adecuado | ✔ | SLF4J + CorrelationIdFilter + patrón logback |
+| 6. Cobertura >60% (objetivo 80%) | ✔ | JaCoCo gate configurado (objetivo 80%) |
+| 7. README documentado | ✔ | Este documento |
+| 8. APIs RESTful | ✔ | CRUD + verbos correctos + códigos HTTP |
+| Funcional 1 Crear franquicia | ✔ | POST /franchises |
+| Funcional 2 Agregar sucursal | ✔ | POST /franchises/{id}/branches |
+| Funcional 3 Agregar producto | ✔ | POST /.../products |
+| Funcional 4 Eliminar producto | ✔ | DELETE /.../products/{productId} |
+| Funcional 5 Modificar stock producto | ✔ | PATCH /.../products/{id}/stock |
+| Funcional 6 Producto mayor stock por sucursal | ✔ | GET /franchises/{id}/branches/max-stock-products |
+| Plus Docker | ✔ | Dockerfile + compose |
+| Plus Renombrar franquicia | ✔ | PATCH /franchises/{id} |
+| Plus Renombrar sucursal | ✔ | PATCH /franchises/{id}/branches/{branchId} |
+| Plus Renombrar producto | ✔ | PATCH /.../products/{productId} |
+| Plus Explicar decisiones diseño | ✔ | Sección Diseño y Decisiones |
+| Plus Endpoint agregado zip (aggregate) | ✔ | GET /franchises/{id}/with-branches |
+| IaC / Cloud despliegue | ☐ | Pendiente (Terraform opcional) |
+
+## Operadores Reactor Utilizados
+- `map`: Transformaciones simples de dominio a DTO.
+- `flatMap`: Encadenar persistencia (guardar y luego recuperar, etc.).
+- `filter`: Validaciones condicionales (existencia/estado) en repositorios.
+- `switchIfEmpty`: Errores de negocio cuando no se encuentra entidad.
+- `zip`: Combinar franquicia + sucursales en `GetFranchiseWithBranchesUseCase`.
+- (Justificación) No se incluyeron `merge` / `concat` al no haber flujos competitivos; se prioriza claridad.
+
+## Errores y Manejo
+Se retornan errores reactivos con `Mono.error(...)` para entidades no encontradas. Spring maneja la serialización en JSON. (Se puede extender con un `@ControllerAdvice` para códigos específicos si se requiere).
+
+## Observabilidad
+- Micrometer Timer custom: latencia de peticiones HTTP (filtro `RequestMetricsFilter`).
+- Correlation ID propagado mediante header `X-Correlation-Id` y MDC.
+- Actuator (health, info) habilitable añadiendo dependencia `spring-boot-starter-actuator` (ya incluida) y exponiendo endpoints en `application.yml`.
+
+## Perfil `inmem`
+Provee repositorios en memoria para ejecutar sin Mongo: útil en evaluaciones rápidas o CI liviano.
+
+## Estrategia de Cobertura
+- Objetivo 80% global (aceptación >60%).
+- Tests de casos de uso cubren lógica principal; controles y DTOs triviales no penalizan significativamente.
+- Próximo paso: agregar pruebas de agregación con Mongo (Testcontainers) para robustecer.
+
+## Despliegue Docker Rápido
+```bash
+docker compose up --build
+# API en http://localhost:8080
+```
+
+## Despliegue Imagen (Pull)
+Si se publica en GHCR / Docker Hub (ver sección CD), ejecutar:
+```bash
+docker run --rm -p 8080:8080 ghcr.io/<owner>/<repo>:main
+```
+
+## Roadmap Futuro
+- IaC (Terraform) para Mongo Atlas / DocumentDB / Cosmos DB.
+- Autenticación / Autorización (Keycloak / OAuth2) si se requiere seguridad.
+- Métricas Prometheus + dashboards Grafana.
+- Pruebas de carga (Gatling / k6) para validar back-pressure.
+
+---
+Si necesitas más detalle o extender la documentación (p.ej. modelo de errores estructurados, versionado de API), abrir un issue o PR.
 
 ## CI
 Workflow GitHub Actions: `.github/workflows/ci.yml` ejecuta build + coverage gate (80%).
